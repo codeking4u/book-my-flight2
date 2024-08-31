@@ -1,9 +1,13 @@
 import express from 'express'
+import airportLookup from '../utils/logics.js';
 
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-    res.send('hello from routes')
+    const sourceCoordArr = airportLookup[req.body.start];
+    const destinationCoordArr = airportLookup[req.body.end];
+    res.send([sourceCoordArr, destinationCoordArr])
+
 })
 
 
