@@ -30,7 +30,6 @@ const getShortestRoute = async (sourceCode, destinationCode) => {
 
     const shortDistData = await findShortestPath(airportCombinations);
     return shortDistData;
-    return `https://www.greatcirclemap.com/?routes=${sourceCode}-${nearestAirports.join("-")}-${destinationCode}`
 }
 
 const getNearestAirports = multiPoints => {
@@ -84,14 +83,20 @@ const findShortestPath = async (paths) => {
 
     for (const path of paths) {
         const distance = await calculatePathDistance(path);
-        allPathDist.push({ "path": path, "distance": distance })
+        allPathDist.push({ path, "distance": distance / 1000 + 'km', "view": generateURL(path) })
         if (distance < shortestDistance) {
             shortestDistance = distance;
             shortestPath = path;
         }
     }
+    const shortestPathView = generateURL(shortestPath);
 
-    return { shortestPath, shortestDistance, allPathDist };
+    return {
+        shortestPath,
+        'shortestDistance': shortestDistance / 1000 + 'km',
+        shortestPathView,
+        allPathDist
+    };
 }
 
 const calculatePathDistance = async (path) => {
@@ -102,6 +107,10 @@ const calculatePathDistance = async (path) => {
     }
 
     return totalDistance;
+}
+
+const generateURL = (path) => {
+    return `https://www.greatcirclemap.com/?routes=${path.join("-")}`
 }
 
 
