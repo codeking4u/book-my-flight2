@@ -16,7 +16,7 @@ const getStraightLinePoints = async (source, destination) => {
     const middleCords = await getCenter([source, destination]);
     const centerSourceToMidCords = await getCenter([source, middleCords]);
     const centerMidToDestinationCords = await getCenter([middleCords, destination]);
-    return [centerSourceToMidCords, middleCords, centerMidToDestinationCords]
+    return [source, centerSourceToMidCords, middleCords, centerMidToDestinationCords, destination]
 }
 
 const getShortestRoute = async (sourceCode, destinationCode) => {
@@ -25,17 +25,22 @@ const getShortestRoute = async (sourceCode, destinationCode) => {
 
     const straightLineDistance = await calculateDistance(sourceCoord, destinationCoord);
     const straightLineMultiplePoints = await getStraightLinePoints(sourceCoord, destinationCoord);
-    const nearestAirports = getNearestAirports(straightLineMultiplePoints)
+    const nearestAirports = getNearestAirports(straightLineMultiplePoints);
+    const airportCombinations = generateAirportCombinations(nearestAirports);
 
-    return nearestAirports
+    const shortDistData = await findShortestPath(airportCombinations);
+    return shortDistData;
+    return `https://www.greatcirclemap.com/?routes=${sourceCode}-${nearestAirports.join("-")}-${destinationCode}`
 }
 
 const getNearestAirports = multiPoints => {
     const nearestAirportsCoords = [];
     const nearestAirportsCodes = [];
+
     multiPoints.forEach(lineCords => {
         nearestAirportsCoords.push(findNearest(lineCords, airportsCordsArr));
     });
+
     nearestAirportsCoords.forEach((airportCords) => {
         const airportCode = Object.keys(airportLookup).find(key => {
             return airportLookup[key].latitude === airportCords.latitude && airportLookup[key].longitude === airportCords.longitude;
@@ -45,6 +50,58 @@ const getNearestAirports = multiPoints => {
 
     })
     return nearestAirportsCodes
+}
+
+
+const generateAirportCombinations = (airportArr) => {
+    const start = airportArr[0];
+    const end = airportArr[airportArr.length - 1];
+    const middle = airportArr.slice(1, airportArr.length - 1);
+    const results = [];
+
+    function combine(current, remaining) {
+        if (remaining.length === 0) {
+            results.push(current);
+        } else {
+            for (let i = 0; i < remaining.length; i++) {
+                combine(
+                    current.concat(remaining[i]),
+                    remaining.slice(i + 1)
+                );
+            }
+        }
+    }
+
+    combine([start], middle);
+
+    return results.map(combination => combination.concat(end));
+}
+
+const findShortestPath = async (paths) => {
+    let shortestPath;
+    let shortestDistance = Infinity;
+    const allPathDist = [];
+
+    for (const path of paths) {
+        const distance = await calculatePathDistance(path);
+        allPathDist.push({ "path": path, "distance": distance })
+        if (distance < shortestDistance) {
+            shortestDistance = distance;
+            shortestPath = path;
+        }
+    }
+
+    return { shortestPath, shortestDistance, allPathDist };
+}
+
+const calculatePathDistance = async (path) => {
+    let totalDistance = 0;
+
+    for (let i = 0; i < path.length - 1; i++) {
+        totalDistance += await calculateDistance(airportLookup[path[i]], airportLookup[path[i + 1]]);
+    }
+
+    return totalDistance;
 }
 
 
