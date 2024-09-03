@@ -72,7 +72,7 @@ const getNearestAirports = multiPoints => {
 
 
 
-const generateAirportCombinations = (airportArr) => {
+const generateAirportCombinations = airportArr => {
     const start = airportArr[0];
     const end = airportArr[airportArr.length - 1];
     const middle = airportArr.slice(1, airportArr.length - 1);
@@ -96,7 +96,7 @@ const generateAirportCombinations = (airportArr) => {
     return results.map(combination => combination.concat(end));
 }
 
-const findShortestPath = (paths) => {
+const findShortestPath = paths => {
     let shortestPath;
     let shortestDistance = Infinity;
     const allPathDist = [];
@@ -119,7 +119,7 @@ const findShortestPath = (paths) => {
     };
 }
 
-const calculatePathDistance = (path) => {
+const calculatePathDistance = path => {
     let totalDistance = 0;
 
     for (let i = 0; i < path.length - 1; i++) {
@@ -129,7 +129,7 @@ const calculatePathDistance = (path) => {
     return totalDistance;
 }
 
-const checkAirportsWithin100kms = (airportList) => {
+const checkAirportsWithin100kms = airportList => {
     const modifiedAirportList = [...airportList]
     for (let ap = 1; ap < airportList.length - 1; ap++) {
         let airportCode = airportList[ap];
