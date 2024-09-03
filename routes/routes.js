@@ -10,5 +10,12 @@ router.get('/', async (req, res) => {
 
 });
 
+router.get('/bonus', async (req, res) => {
+    const { start, end } = req.body;
+    const data = await getShortestRoute(start, end, true)
+    res.send(data)
+
+});
+
 
 export default router;

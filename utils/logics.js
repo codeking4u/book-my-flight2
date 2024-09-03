@@ -1,5 +1,7 @@
-import { getDistance, getCenter, findNearest } from 'geolib';
+import { getDistance, getCenter, findNearest, orderByDistance } from 'geolib';
 import aiportData from '../data/airports.json' assert { type: 'json' };
+
+const distanceCache = {};
 
 /* this is to reduce multile number of filter functions */
 const airportLookup = aiportData.reduce((map, airport) => {
@@ -8,48 +10,66 @@ const airportLookup = aiportData.reduce((map, airport) => {
 }, {});
 const airportsCordsArr = Object.values(airportLookup);
 
-const calculateDistance = async (source, destination) => {
-    return await getDistance(source, destination);
+
+const reverseAirportLookupByCoords = Object.keys(airportLookup).reduce((map, code) => {
+    const { latitude, longitude } = airportLookup[code];
+    const key = `${latitude},${longitude}`;
+    map[key] = code;
+    return map;
+}, {});
+
+
+
+const calculateDistance = (source, destination) => {
+    const cacheKey = `${source.latitude},${source.longitude}-${destination.latitude},${destination.longitude}`;
+    if (distanceCache[cacheKey]) {
+        return distanceCache[cacheKey];
+    }
+    const distance = getDistance(source, destination);
+    distanceCache[cacheKey] = distance;
+    return distance;
 }
 
-const getStraightLinePoints = async (source, destination) => {
-    const middleCords = await getCenter([source, destination]);
-    const centerSourceToMidCords = await getCenter([source, middleCords]);
-    const centerMidToDestinationCords = await getCenter([middleCords, destination]);
+const getStraightLinePoints = (source, destination) => {
+    const middleCords = getCenter([source, destination]);
+    const centerSourceToMidCords = getCenter([source, middleCords]);
+    const centerMidToDestinationCords = getCenter([middleCords, destination]);
     return [source, centerSourceToMidCords, middleCords, centerMidToDestinationCords, destination]
 }
 
-const getShortestRoute = async (sourceCode, destinationCode) => {
+const getShortestRoute = async (sourceCode, destinationCode, bonus = false) => {
     const sourceCoord = airportLookup[sourceCode];
     const destinationCoord = airportLookup[destinationCode];
 
-    const straightLineDistance = await calculateDistance(sourceCoord, destinationCoord);
-    const straightLineMultiplePoints = await getStraightLinePoints(sourceCoord, destinationCoord);
-    const nearestAirports = getNearestAirports(straightLineMultiplePoints);
-    const airportCombinations = generateAirportCombinations(nearestAirports);
+    //const straightLineDistance = calculateDistance(sourceCoord, destinationCoord);
+    const straightLineMultiplePoints = getStraightLinePoints(sourceCoord, destinationCoord);
+    let nearestAirports = getNearestAirports(straightLineMultiplePoints);
 
+    /* bonus part */
+    if (bonus) {
+        nearestAirports = checkAirportsWithin100kms(nearestAirports);
+    }
+    /* bonus part */
+
+    const airportCombinations = generateAirportCombinations(nearestAirports);
     const shortDistData = await findShortestPath(airportCombinations);
     return shortDistData;
 }
 
 const getNearestAirports = multiPoints => {
-    const nearestAirportsCoords = [];
     const nearestAirportsCodes = [];
 
     multiPoints.forEach(lineCords => {
-        nearestAirportsCoords.push(findNearest(lineCords, airportsCordsArr));
+        const nearestAirport = findNearest(lineCords, airportsCordsArr);
+        const airportCode = reverseAirportLookupByCoords[`${nearestAirport.latitude},${nearestAirport.longitude}`];
+        if (airportCode && !nearestAirportsCodes.includes(airportCode)) {
+            nearestAirportsCodes.push(airportCode);
+        }
     });
 
-    nearestAirportsCoords.forEach((airportCords) => {
-        const airportCode = Object.keys(airportLookup).find(key => {
-            return airportLookup[key].latitude === airportCords.latitude && airportLookup[key].longitude === airportCords.longitude;
-        })
-
-        if (!nearestAirportsCodes.includes(airportCode)) nearestAirportsCodes.push(airportCode);
-
-    })
-    return nearestAirportsCodes
+    return nearestAirportsCodes;
 }
+
 
 
 const generateAirportCombinations = (airportArr) => {
@@ -76,13 +96,13 @@ const generateAirportCombinations = (airportArr) => {
     return results.map(combination => combination.concat(end));
 }
 
-const findShortestPath = async (paths) => {
+const findShortestPath = (paths) => {
     let shortestPath;
     let shortestDistance = Infinity;
     const allPathDist = [];
 
     for (const path of paths) {
-        const distance = await calculatePathDistance(path);
+        const distance = calculatePathDistance(path);
         allPathDist.push({ path, "distance": distance / 1000 + 'km', "view": generateURL(path) })
         if (distance < shortestDistance) {
             shortestDistance = distance;
@@ -99,19 +119,35 @@ const findShortestPath = async (paths) => {
     };
 }
 
-const calculatePathDistance = async (path) => {
+const calculatePathDistance = (path) => {
     let totalDistance = 0;
 
     for (let i = 0; i < path.length - 1; i++) {
-        totalDistance += await calculateDistance(airportLookup[path[i]], airportLookup[path[i + 1]]);
+        totalDistance += calculateDistance(airportLookup[path[i]], airportLookup[path[i + 1]]);
     }
 
     return totalDistance;
 }
 
-const generateURL = (path) => {
-    return `https://www.greatcirclemap.com/?routes=${path.join("-")}`
+const checkAirportsWithin100kms = (airportList) => {
+    const modifiedAirportList = [...airportList]
+    for (let ap = 1; ap < airportList.length - 1; ap++) {
+        let airportCode = airportList[ap];
+        let currAirportCoord = airportLookup[airportCode]
+        const nearAirportList = orderByDistance(currAirportCoord, airportsCordsArr);
+        let nearAirport = nearAirportList[1];
+        let nearAirportDistance = calculateDistance(currAirportCoord, nearAirport)
+        if (nearAirportDistance < 100000) {
+            const airportCode = reverseAirportLookupByCoords[`${nearAirport.latitude},${nearAirport.longitude}`];
+            modifiedAirportList.splice(ap + 1, 0, airportCode);
+            console.log('adding ' + airportCode)
+        }
+    }
+    return modifiedAirportList;
 }
 
+const generateURL = path => `https://www.greatcirclemap.com/?routes=${path.join("-")}`;
 
-export { airportLookup, calculateDistance, getShortestRoute };
+
+
+export { getShortestRoute };
