@@ -1,6 +1,6 @@
 # Finding Shortest Flight Path API
 
-This API helps you find the shortest route between two airports using their IATA or ICAO codes. As a bonus it also gives you alternative paths and also helps to find where you can do ground hops within 100kms distance.
+This API helps you find the shortest route between two airports using their IATA or ICAO codes. As a bonus, it also gives you alternative paths and also helps to find where you can do ground hops within 100kms distance.
 
 ![image](https://github.com/user-attachments/assets/49bb93bf-4daf-487a-8b81-e6e6404e072d)
 
@@ -18,7 +18,7 @@ This API helps you find the shortest route between two airports using their IATA
 1. Clone the project from GitHub.
 
 ```sh
-   git clone https://github.com/codeking4u/book-my-flight2.git
+git clone https://github.com/codeking4u/book-my-flight2.git
 ```
 2. Install the dependencies
 
@@ -41,16 +41,23 @@ This application is using port 3000, so if this is localhost, then the server UR
 - **Method:** `GET`
 - **Description:** Returns the shortest flight route between two airports.
 - **Request Body:**
+  
+   | Field name  | Description |
+   | ------------- | ------------- |
+   | start  | This is the Source Airport Code.  |
+   | end  | This is the Destination Airport Code.  |
+
+- **Request Body Example:**
   ```json
   {
-    "start": "TLL", /* This the Source Airport Code */
-    "end": "TAK" /* This the Destination Airport Code */
+    "start": "TLL", 
+    "end": "TAK" 
   }
 
 
 - **Response:**
 
-| First Header  | Second Header |
+| Field name  | Description |
 | ------------- | ------------- |
 | shortestPath  | Contains the shortest route. Outputs array of airport codes  |
 | shortestDistance  | Info on shortest distance caluclation in kilometers  |
