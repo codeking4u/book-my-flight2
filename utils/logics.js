@@ -140,7 +140,7 @@ const checkAirportsWithin100kms = airportList => {
         if (nearAirportDistance < 100000) {
             const airportCode = reverseAirportLookupByCoords[`${nearAirport.latitude},${nearAirport.longitude}`];
             modifiedAirportList.splice(ap + 1, 0, airportCode);
-            console.log('adding ' + airportCode)
+            console.log('Found Airport for ground hop - ' + airportCode)
         }
     }
     return modifiedAirportList;
