@@ -19,7 +19,7 @@ const reverseAirportLookupByCoords = Object.keys(airportLookup).reduce((map, cod
 }, {});
 
 
-
+/* calculates distance between source and destination. Both arguements are coordinates */
 const calculateDistance = (source, destination) => {
     const cacheKey = `${source.latitude},${source.longitude}-${destination.latitude},${destination.longitude}`;
     if (distanceCache[cacheKey]) {
@@ -30,6 +30,7 @@ const calculateDistance = (source, destination) => {
     return distance;
 }
 
+/* Finds point P1 , P2 and P3 on straight line between source and destination   */
 const getStraightLinePoints = (source, destination) => {
     const middleCords = getCenter([source, destination]);
     const centerSourceToMidCords = getCenter([source, middleCords]);
@@ -59,6 +60,7 @@ const getShortestRoute = async (sourceCode, destinationCode, bonus = false) => {
     return bonus ? { ...shortDistData, hoppingInfo } : shortDistData;
 }
 
+/* finds nearest aiports for a every coordinates in input array */
 const getNearestAirports = multiPoints => {
     const nearestAirportsCodes = [];
 
@@ -72,7 +74,6 @@ const getNearestAirports = multiPoints => {
 
     return nearestAirportsCodes;
 }
-
 
 
 const generateAirportCombinations = (airportArr) => {
