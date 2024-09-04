@@ -41,19 +41,22 @@ const getShortestRoute = async (sourceCode, destinationCode, bonus = false) => {
     const sourceCoord = airportLookup[sourceCode];
     const destinationCoord = airportLookup[destinationCode];
 
-    //const straightLineDistance = calculateDistance(sourceCoord, destinationCoord);
     const straightLineMultiplePoints = getStraightLinePoints(sourceCoord, destinationCoord);
     let nearestAirports = getNearestAirports(straightLineMultiplePoints);
 
     /* bonus part */
+    let hoppingInfo = {}
     if (bonus) {
-        nearestAirports = checkAirportsWithin100kms(nearestAirports);
+        const { modifiedAirportList, hoppingLegs } = checkAirportsWithin100kms(nearestAirports);
+        nearestAirports = modifiedAirportList
+        hoppingInfo = hoppingLegs
+
     }
     /* bonus part */
 
     const airportCombinations = generateAirportCombinations(nearestAirports);
     const shortDistData = await findShortestPath(airportCombinations);
-    return shortDistData;
+    return bonus ? { ...shortDistData, hoppingInfo } : shortDistData;
 }
 
 const getNearestAirports = multiPoints => {
@@ -72,29 +75,26 @@ const getNearestAirports = multiPoints => {
 
 
 
-const generateAirportCombinations = airportArr => {
+const generateAirportCombinations = (airportArr) => {
+    if (airportArr.length === 2) return [airportArr];
     const start = airportArr[0];
     const end = airportArr[airportArr.length - 1];
     const middle = airportArr.slice(1, airportArr.length - 1);
     const results = [];
 
-    function combine(current, remaining) {
-        if (remaining.length === 0) {
-            results.push(current);
-        } else {
-            for (let i = 0; i < remaining.length; i++) {
-                combine(
-                    current.concat(remaining[i]),
-                    remaining.slice(i + 1)
-                );
-            }
+    const combine = (current, remaining) => {
+        if (current.length > 0) {
+            results.push([start, ...current, end]);
         }
-    }
+        for (let i = 0; i < remaining.length; i++) {
+            combine(current.concat(remaining[i]), remaining.slice(i + 1));
+        }
+    };
 
-    combine([start], middle);
+    combine([], middle);
 
-    return results.map(combination => combination.concat(end));
-}
+    return results;
+};
 
 const findShortestPath = paths => {
     let shortestPath;
@@ -131,9 +131,10 @@ const calculatePathDistance = path => {
 
 const checkAirportsWithin100kms = airportList => {
     const modifiedAirportList = [...airportList]
+    const hoppingLegs = [];
     for (let ap = 1; ap < airportList.length - 1; ap++) {
-        let airportCode = airportList[ap];
-        let currAirportCoord = airportLookup[airportCode]
+        let currAirportCode = airportList[ap];
+        let currAirportCoord = airportLookup[currAirportCode]
         const nearAirportList = orderByDistance(currAirportCoord, airportsCordsArr);
         let nearAirport = nearAirportList[1];
         let nearAirportDistance = calculateDistance(currAirportCoord, nearAirport)
@@ -141,9 +142,11 @@ const checkAirportsWithin100kms = airportList => {
             const airportCode = reverseAirportLookupByCoords[`${nearAirport.latitude},${nearAirport.longitude}`];
             modifiedAirportList.splice(ap + 1, 0, airportCode);
             console.log('Found Airport for ground hop - ' + airportCode)
+            hoppingLegs.push({ from: currAirportCode, to: airportCode, distance: nearAirportDistance / 1000 + 'km' });
+            console.log(hoppingLegs)
         }
     }
-    return modifiedAirportList;
+    return { modifiedAirportList, hoppingLegs };
 }
 
 const generateURL = path => `https://www.greatcirclemap.com/?routes=${path.join("-")}`;
