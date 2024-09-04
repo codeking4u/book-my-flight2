@@ -130,7 +130,10 @@ This application is using port 3000, so if this is localhost, then the server UR
     "start": "TLL",
     "end": "TAK"
   }
-- **Response:** Similar to the / endpoint but considers nearby airports.
+- **Response:** Similar to the localhost:3000/ endpoint but considers nearby airports as hoping option within 100kms. Look for hoppingInfo key in response as shown below.
+
+- ![image](https://github.com/user-attachments/assets/d1305aec-cb9d-4d0f-870d-464b7a1ec53b)
+
 
 
 ## Logic used
@@ -149,4 +152,5 @@ to find the shortest path.
 Further optimization is possible by doing the below points.
 1. Right now I have a list of around 4000 airports where I am doing the lookup, it would be great we can categories the airports based on region such as EU, Asia, America etc and then loop throguh as per region, instead of looping through all airports unnecessarily.
 2. As mentioned above in Logic used section, I am using three referral points P1, P2, and P3 to find the shortest path if we have more points in addition to the above optimization, then we will be able to search for more optimized shortest path possible.
+3. A good caching mechanism would be really good.
    
